@@ -51,6 +51,10 @@ serde = { version = "1.0.228", features = ["derive"], optional = true } # soluti
 ndarray = { version = "0.17.2", optional = true }
 faer = { version = "0.24.0", optional = true }
 
+[patch.crates-io]
+differential-equations-derive = { path = "derive" }
+
+
 [dev-dependencies]
 quill = "0.2.0" # Plotting for examples
 criterion = { version = "0.8.2", features = ["html_reports"] } # Benchmarking library
@@ -219,3 +223,19 @@ required-features = ["nalgebra"]
 [[example]]
 name = "ode_19_orbital_mechanics_energy_conservation"
 path = "examples/ode/19_orbital_mechanics_energy_conservation/main.rs"
+
+[[example]]
+name = "derive_test"
+path = "examples/other/macro.rs"
+
+[[example]]
+name = "manual_vec"
+path = "examples/other/manual_vec.rs"
+
+[[example]]
+name = "just_vec"
+path = "examples/other/just_vec.rs"
+
+[[example]]
+name = "auto_vec"
+path = "examples/other/auto_vec.rs"

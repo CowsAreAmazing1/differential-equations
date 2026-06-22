@@ -253,3 +253,68 @@ fn test_mixed_field_types() {
     assert_eq!(state.get_component(6), 7.0); // complex.re
     assert_eq!(state.get_component(7), 8.0); // complex.im
 }
+
+#[test]
+fn test_vec_fields() {
+    #[derive(State)]
+    struct VecState<T> {
+        single: T,
+        vec_field: Vec<T>,
+    }
+
+    let mut state = VecState {
+        single: 1.0,
+        vec_field: vec![2.0, 3.0, 4.0],
+    };
+    test_state_basics(&mut state, 4); // 1 + 3 = 4 elements
+
+    // Test Vec field element access
+    assert_eq!(state.get_component(0), 1.0); // single
+    assert_eq!(state.get_component(1), 2.0); // vec_field[0]
+    assert_eq!(state.get_component(2), 3.0); // vec_field[1]
+    assert_eq!(state.get_component(3), 4.0); // vec_field[2]
+
+    // Test Vec field set_component
+    state.set_component(1, 10.0);
+    assert_eq!(state.vec_field[0], 10.0);
+
+    // Test arithmetic with Vec fields
+    let other = VecState {
+        single: 0.5,
+        vec_field: vec![1.0, 1.0, 1.0],
+    };
+    let sum = state + other;
+    assert_eq!(sum.single, 1.5);
+    assert_eq!(sum.vec_field, vec![11.0, 4.0, 5.0]);
+}
+
+#[test]
+fn test_vec_fields_only() {
+    #[derive(State)]
+    struct MultiVecState<T> {
+        vec1: Vec<T>,
+        vec2: Vec<T>,
+    }
+
+    let mut state = MultiVecState {
+        vec1: vec![1.0, 2.0],
+        vec2: vec![3.0, 4.0, 5.0],
+    };
+    test_state_basics(&mut state, 5); // 2 + 3 = 5 elements
+
+    // Test multi-vec element access
+    assert_eq!(state.get_component(0), 1.0); // vec1[0]
+    assert_eq!(state.get_component(1), 2.0); // vec1[1]
+    assert_eq!(state.get_component(2), 3.0); // vec2[0]
+    assert_eq!(state.get_component(3), 4.0); // vec2[1]
+    assert_eq!(state.get_component(4), 5.0); // vec2[2]
+
+    // Test arithmetic
+    let other = MultiVecState {
+        vec1: vec![0.5, 0.5],
+        vec2: vec![1.0, 1.0, 1.0],
+    };
+    let sum = state + other;
+    assert_eq!(sum.vec1, vec![1.5, 2.5]);
+    assert_eq!(sum.vec2, vec![4.0, 5.0, 6.0]);
+}

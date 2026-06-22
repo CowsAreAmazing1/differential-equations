@@ -129,7 +129,7 @@ pub fn derive_state(input: TokenStream) -> TokenStream {
 
     // Generate all trait implementations
     let clone_impl = generate_clone_impl(&name, &context);
-    let copy_impl = generate_copy_impl(&name, &context);
+    let copy_impl = generate_copy_impl(&name, &context, &field_info);
     let debug_impl = generate_debug_impl(&name, &context, &debug_fields);
     let state_impl = generate_state_impl(
         &name,
@@ -139,6 +139,7 @@ pub fn derive_state(input: TokenStream) -> TokenStream {
         &field_set_branches,
         &zeros_init,
         &fields,
+        &field_info,
     );
     let add_impl = generate_add_impl(&name, &context, &fields, &field_info);
     let sub_impl = generate_sub_impl(&name, &context, &fields, &field_info);

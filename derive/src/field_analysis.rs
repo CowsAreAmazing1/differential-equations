@@ -20,6 +20,7 @@ pub enum FieldTypeInfo {
     ArrayOfComplex {
         array_size: usize,
     },
+    Vec,
 }
 
 impl FieldTypeInfo {
@@ -35,6 +36,7 @@ impl FieldTypeInfo {
                 cols,
             } => array_size * rows * cols,
             FieldTypeInfo::ArrayOfComplex { array_size } => array_size * 2,
+            FieldTypeInfo::Vec => 0,
         }
     }
 }
@@ -50,7 +52,34 @@ pub fn analyze_field_type(ty: &Type) -> FieldTypeInfo {
                         .unwrap_or_else(|_| panic!("Array size must be a positive integer")),
                     _ => panic!("Array size must be an integer literal"),
                 },
-                _ => panic!("Array size must be a compile-time constant"),
+                Expr::Path(path) => {
+                    panic!(
+                        "Expected integer literal for array dimension, found: {:?}",
+                        match path.path.get_ident() {
+                            Some(ident) => ident.to_string(),
+                            None => "nothing?".to_string(),
+                        }
+                    )
+                }
+                Expr::Group(group) => match &*group.expr {
+                    Expr::Lit(lit) => match &lit.lit {
+                        syn::Lit::Int(int_lit) => int_lit
+                            .base10_parse::<usize>()
+                            .unwrap_or_else(|_| panic!("Array size must be a positive integer")),
+                        _ => panic!("Array size must be an integer literal"),
+                    },
+                    Expr::Path(path) => {
+                        panic!(
+                            "Expected integer literal for array dimension, found: {:?}",
+                            match path.path.get_ident() {
+                                Some(ident) => ident.to_string(),
+                                None => "nothing?".to_string(),
+                            }
+                        )
+                    }
+                    _ => panic!("Array size must be a compile-time literal"),
+                },
+                _ => panic!("Array size must be a compile-time literal"),
             };
 
             // Analyze the element type to see if it's a complex type
@@ -68,6 +97,10 @@ pub fn analyze_field_type(ty: &Type) -> FieldTypeInfo {
             // Check if it's an SMatrix type
             if let Some(segment) = path.segments.last() {
                 let type_name = segment.ident.to_string();
+
+                if type_name == "Vec" {
+                    return FieldTypeInfo::Vec;
+                }
 
                 // Handle explicit SMatrix<T, R, C>
                 if type_name == "SMatrix" {

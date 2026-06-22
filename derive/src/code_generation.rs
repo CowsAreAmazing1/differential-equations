@@ -90,6 +90,17 @@ pub fn generate_get_branches(
                 });
                 current_index = end_index;
             }
+            FieldTypeInfo::Vec => {
+                field_get_branches.push(quote! {
+                    {
+                        let mut start = #current_index;
+                        if i >= start && i < start + #field_name.len() {
+                            return #field_name[i - start];
+                        }
+                    }
+                });
+                current_index = usize::MAX;
+            }
         }
     }
 
@@ -264,6 +275,29 @@ pub fn generate_set_branches(
                 });
                 current_index = end_index;
             }
+            FieldTypeInfo::Vec => {
+                let vec_setter = match &field.ident {
+                    Some(ident) => quote! {
+                        let start = #current_index;
+                        if i >= start && i < start + self.#ident.len() {
+                            self.#ident[i - start] = value;
+                            return;
+                        }
+                    },
+                    None => {
+                        let index = syn::Index::from(field_idx);
+                        quote! {
+                            let start = #current_index;
+                            if i >= start && i < start + self.#index.len() {
+                                self.#index[i - start] = value;
+                                return;
+                            }
+                        }
+                    }
+                };
+                field_set_branches.push(vec_setter);
+                current_index = usize::MAX;
+            }
         }
     }
 
@@ -302,6 +336,7 @@ pub fn generate_zeros_init(
                 FieldTypeInfo::ArrayOfComplex { array_size } => {
                     quote! { #ident: [num_complex::Complex::new(#zero, #zero); #array_size] }
                 }
+                FieldTypeInfo::Vec => quote! { #ident: Vec::new() },
             },
             None => match field_type {
                 FieldTypeInfo::Single => quote! { #zero },
@@ -321,6 +356,7 @@ pub fn generate_zeros_init(
                 FieldTypeInfo::ArrayOfComplex { array_size } => {
                     quote! { [num_complex::Complex::new(#zero, #zero); #array_size] }
                 }
+                FieldTypeInfo::Vec => quote! { Vec::new() },
             },
         })
         .collect()

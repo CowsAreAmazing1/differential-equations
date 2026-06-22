@@ -166,7 +166,11 @@ pub fn generate_clone_impl(name: &Ident, context: &ImplContext) -> proc_macro2::
 }
 
 /// Generate Copy trait implementation
-pub fn generate_copy_impl(name: &Ident, context: &ImplContext) -> proc_macro2::TokenStream {
+pub fn generate_copy_impl(
+    name: &Ident,
+    context: &ImplContext,
+    field_info: &[FieldTypeInfo],
+) -> proc_macro2::TokenStream {
     let ImplContext {
         impl_generics,
         type_generics,
@@ -174,8 +178,15 @@ pub fn generate_copy_impl(name: &Ident, context: &ImplContext) -> proc_macro2::T
         ..
     } = context;
 
-    quote! {
-        impl #impl_generics Copy for #name #type_generics #where_clause {}
+    if !field_info
+        .iter()
+        .any(|info| matches!(info, FieldTypeInfo::Vec))
+    {
+        quote! {
+            impl #impl_generics Copy for #name #type_generics #where_clause {}
+        }
+    } else {
+        quote! {}
     }
 }
 
@@ -212,6 +223,7 @@ pub fn generate_state_impl(
     field_set_branches: &[proc_macro2::TokenStream],
     zeros_init: &[proc_macro2::TokenStream],
     fields: &Punctuated<Field, Comma>,
+    field_info: &[FieldTypeInfo],
 ) -> proc_macro2::TokenStream {
     let zeros_constructor = generate_constructor_syntax(zeros_init, fields);
     let ImplContext {
@@ -223,10 +235,32 @@ pub fn generate_state_impl(
     } = context;
     let zero = zero_expr;
 
+    // Generate code to add lengths of Vec fields
+    let vec_len_additions: Vec<proc_macro2::TokenStream> = fields
+        .iter()
+        .enumerate()
+        .zip(field_info)
+        .filter_map(|((field_idx, field), field_type)| {
+            if matches!(field_type, FieldTypeInfo::Vec) {
+                match &field.ident {
+                    Some(ident) => Some(quote! { total += self.#ident.len(); }),
+                    None => {
+                        let index = syn::Index::from(field_idx);
+                        Some(quote! { total += self.#index.len(); })
+                    }
+                }
+            } else {
+                None
+            }
+        })
+        .collect();
+
     quote! {
         impl #impl_generics differential_equations::traits::State<#scalar_ty> for #name #type_generics #where_clause {
             fn len(&self) -> usize {
-                #total_elements
+                let mut total = #total_elements;
+                #(#vec_len_additions)*
+                total
             }
 
             fn get_component(&self, index: usize) -> #scalar_ty {
@@ -432,6 +466,15 @@ fn generate_neg_fields(
                         }
                     }
                 }
+                FieldTypeInfo::Vec => {
+                    quote! {
+                        #ident: {
+                            let mut result = self.#ident.clone();
+                            for i in 0..result.len() { result[i] = -result[i]; }
+                            result
+                        }
+                    }
+                }
             },
             None => {
                 let index = syn::Index::from(field_idx);
@@ -462,6 +505,15 @@ fn generate_neg_fields(
                             {
                                 let mut result = self.#index;
                                 for i in 0..#array_size { result[i] = -self.#index[i]; }
+                                result
+                            }
+                        }
+                    }
+                    FieldTypeInfo::Vec => {
+                        quote! {
+                            {
+                                let mut result = self.#index.clone();
+                                for i in 0..result.len() { result[i] = -result[i]; }
                                 result
                             }
                         }
@@ -618,6 +670,30 @@ fn generate_operation_fields(
                             }
                         }
                     },
+                    FieldTypeInfo::Vec => match op_type {
+                        OperationType::Add | OperationType::Sub => {
+                            quote! {
+                                #ident: {
+                                    let mut result = #lhs.#ident.clone();
+                                    for i in 0..result.len() {
+                                        result[i] = #lhs.#ident[i] #op_symbol #rhs.#ident[i];
+                                    }
+                                    result
+                                }
+                            }
+                        }
+                        OperationType::Mul | OperationType::Div => {
+                            quote! {
+                                #ident: {
+                                    let mut result = #lhs.#ident.clone();
+                                    for i in 0..result.len() {
+                                        result[i] = #lhs.#ident[i] #op_symbol #rhs;
+                                    }
+                                    result
+                                }
+                            }
+                        }
+                    },
                 },
                 None => {
                     let index = syn::Index::from(field_idx);
@@ -718,6 +794,30 @@ fn generate_operation_fields(
                                 }
                             }
                         },
+                        FieldTypeInfo::Vec => match op_type {
+                            OperationType::Add | OperationType::Sub => {
+                                quote! {
+                                    {
+                                        let mut result = #lhs.#index.clone();
+                                        for i in 0..result.len() {
+                                            result[i] = #lhs.#index[i] #op_symbol #rhs.#index[i];
+                                        }
+                                        result
+                                    }
+                                }
+                            }
+                            OperationType::Mul | OperationType::Div => {
+                                quote! {
+                                    {
+                                        let mut result = #lhs.#index.clone();
+                                        for i in 0..result.len() {
+                                            result[i] = #lhs.#index[i] #op_symbol #rhs;
+                                        }
+                                        result
+                                    }
+                                }
+                            }
+                        },
                     }
                 }
             }
@@ -760,6 +860,13 @@ fn generate_assign_operations(
                         }
                     }
                 }
+                FieldTypeInfo::Vec => {
+                    quote! {
+                        for i in 0..self.#ident.len() {
+                            self.#ident[i] += rhs.#ident[i];
+                        }
+                    }
+                }
             },
             None => {
                 let index = syn::Index::from(field_idx);
@@ -784,6 +891,13 @@ fn generate_assign_operations(
                     FieldTypeInfo::ArrayOfComplex { array_size } => {
                         quote! {
                             for i in 0..#array_size {
+                                self.#index[i] += rhs.#index[i];
+                            }
+                        }
+                    }
+                    FieldTypeInfo::Vec => {
+                        quote! {
+                            for i in 0..self.#index.len() {
                                 self.#index[i] += rhs.#index[i];
                             }
                         }
