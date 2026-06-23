@@ -68,4 +68,6 @@ where
 
     /// Set solver status
     fn set_status(&mut self, status: Status<T, Y>);
+
+    fn stage_states(&self) -> Option<&[Y]>;
 }

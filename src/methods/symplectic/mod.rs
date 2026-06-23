@@ -26,6 +26,8 @@ pub struct SymplecticIntegrator<E, F, T: Real, Y: State<T>, const S: usize> {
     pub y: Y,
     pub y_prev: Y,
 
+    pub stage_states: [Y; S],
+
     // Constants from partitioned method
     pub c: [T; S], // Position update coefficients
     pub d: [T; S], // Momentum update coefficients
@@ -57,6 +59,7 @@ impl<E, F, T: Real, Y: State<T>, const S: usize> Default for SymplecticIntegrato
             t: T::zero(),
             y: Y::zeros(),
             y_prev: Y::zeros(),
+            stage_states: core::array::from_fn(|_| Y::zeros()),
             c: [T::zero(); S],
             d: [T::zero(); S],
             h_max: T::infinity(),

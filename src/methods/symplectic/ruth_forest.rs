@@ -125,6 +125,8 @@ impl<T: Real, Y: State<T>> OrdinaryNumericalMethod<T, Y>
                     y_next.get_component(j) + self.h * self.d[i] * f.get_component(j),
                 );
             }
+
+            self.stage_states[i] = y_next.clone();
         }
 
         self.t += self.h;
@@ -164,6 +166,10 @@ impl<T: Real, Y: State<T>> OrdinaryNumericalMethod<T, Y>
 
     fn set_status(&mut self, status: Status<T, Y>) {
         self.status = status;
+    }
+
+    fn stage_states(&self) -> Option<&[Y]> {
+        Some(&self.stage_states)
     }
 }
 

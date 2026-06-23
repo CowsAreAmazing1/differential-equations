@@ -293,6 +293,9 @@ impl<T: Real, Y: State<T>, const O: usize, const S: usize, const I: usize>
     fn set_status(&mut self, status: Status<T, Y>) {
         self.status = status;
     }
+    fn stage_states(&self) -> Option<&[Y]> {
+        Some(&self.k)
+    }
 }
 
 impl<T: Real, Y: State<T>, const O: usize, const S: usize, const I: usize> Interpolation<T, Y>

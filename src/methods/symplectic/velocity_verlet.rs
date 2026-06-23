@@ -118,6 +118,8 @@ impl<T: Real, Y: State<T>> OrdinaryNumericalMethod<T, Y>
                 i,
                 y_next.get_component(i) + self.h * self.d[0] * f.get_component(i),
             );
+
+            self.stage_states[i] = y_next.clone();
         }
 
         // 2. Update q (position) by full step: q_{n+1} = q_n + h * p_{n+1/2} (assuming unit mass, v = p)
@@ -179,6 +181,9 @@ impl<T: Real, Y: State<T>> OrdinaryNumericalMethod<T, Y>
 
     fn set_status(&mut self, status: Status<T, Y>) {
         self.status = status;
+    }
+    fn stage_states(&self) -> Option<&[Y]> {
+        Some(&self.stage_states)
     }
 }
 

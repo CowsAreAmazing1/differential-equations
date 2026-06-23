@@ -465,6 +465,9 @@ impl<T: Real, Y: State<T>> OrdinaryNumericalMethod<T, Y>
     fn set_status(&mut self, status: Status<T, Y>) {
         self.status = status;
     }
+    fn stage_states(&self) -> Option<&[Y]> {
+        None
+    }
 }
 
 impl<T: Real, Y: State<T>> Interpolation<T, Y> for BackwardDifferentiationFormula<Ordinary, T, Y> {
