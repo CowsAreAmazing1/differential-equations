@@ -241,6 +241,11 @@ impl<E, F, T: Real, Y: State<T>, const O: usize, const S: usize, const I: usize>
     pub fn dense_stages(&self) -> usize {
         self.dense_stages
     }
+
+    /// Returns the values of the stage variables at the current step
+    pub fn stage_values(&self) -> &[Y] {
+        &self.k
+    }
 }
 
 impl<F, T: Real, Y: State<T>, const O: usize, const S: usize, const I: usize>
