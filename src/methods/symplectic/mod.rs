@@ -13,9 +13,6 @@
 mod ruth_forest;
 mod velocity_verlet;
 
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
-
 use std::marker::PhantomData;
 
 use crate::{
@@ -23,7 +20,6 @@ use crate::{
     traits::{Real, State},
 };
 
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct SymplecticIntegrator<E, F, T: Real, Y: State<T>, const S: usize> {
     pub h: T,
     pub t: T,

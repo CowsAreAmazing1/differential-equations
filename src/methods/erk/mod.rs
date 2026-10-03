@@ -13,9 +13,6 @@ use crate::{
     traits::{Real, State},
 };
 
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
-
 /// Runge-Kutta solver that can handle:
 /// - Fixed-step methods with cubic Hermite interpolation
 /// - Adaptive step methods with embedded error estimation and cubic Hermite interpolation
@@ -31,7 +28,6 @@ use serde::{Deserialize, Serialize};
 /// * `const O`: Order of the method
 /// * `const S`: Number of stages in the method
 /// * `const I`: Total number of stages including interpolation (equal to S for methods without dense output)
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Clone)]
 pub struct ExplicitRungeKutta<
     E,
